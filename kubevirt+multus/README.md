@@ -294,16 +294,37 @@ Annotations:      cni.projectcalico.org/containerID: 274d05b78949d3b9b1f5d517007
 
 Verify limited connectivity by logging into a vm on each network and checking that it can reach the vm it should (if any) and can't reach the ones it can't.
 
+`testvm1` won't be able to reach `testvm2` or `testvm3`
 ```shell
 virtctl testvm1
+Successfully connected to testvm1 console. The escape sequence is ^]
 # login
+$ ping -c 3 -w 10 192.168.2.201
+PING 192.168.2.201 (192.168.2.201): 56 data bytes
+--- 192.168.2.201 ping statistics ---
+10 packets transmitted, 0 packets received, 100% packet loss
+$ ping -c 3 -w 10 192.168.2.202
+PING 192.168.2.202 (192.168.2.202): 56 data bytes
+--- 192.168.2.202 ping statistics ---
+10 packets transmitted, 0 packets received, 100% packet loss
 ```
 
+`testvm2` should be able to reach `testvm3`, but not `testvm1`
 ```shell
-$ ping   -c 3 -w 10 192.168.1.201
+$ virtctl console testvm2
+Successfully connected to testvm2 console. The escape sequence is ^]
+$ ping -c 3 -w 10 192.168.2.202
+PING 192.168.2.202 (192.168.2.202): 56 data bytes
+64 bytes from 192.168.2.202: seq=0 ttl=63 time=0.778 ms
+64 bytes from 192.168.2.202: seq=1 ttl=63 time=0.806 ms
+64 bytes from 192.168.2.202: seq=2 ttl=63 time=0.408 ms
+--- 192.168.2.202 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.408/0.664/0.806 ms
+$ ping -c 3 -w 10 192.168.1.201
 PING 192.168.1.201 (192.168.1.201): 56 data bytes
 --- 192.168.1.201 ping statistics ---
-5 packets transmitted, 0 packets received, 100% packet loss
+10 packets transmitted, 0 packets received, 100% packet loss
 ```
 
 
