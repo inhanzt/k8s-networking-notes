@@ -1,9 +1,18 @@
 # k8s-networking-notes
 
-Grab Multus and make a couple of networks.
+Grab Multus and verify that it's running.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick.yml
+```
+
+Check status of Multus
+
+```shell
+$ kubectl get pods --all-namespaces | grep -i multus
+kube-system   kube-multus-ds-f5kcr                       1/1     Running             0             10m
+kube-system   kube-multus-ds-wqz2v                       1/1     Running             0             10m
+kube-system   kube-multus-ds-zjfrx                       1/1     Running             0             10m
 ```
 
 ```shell
