@@ -2,9 +2,11 @@
 
 Grab Multus and make a couple of networks.
 
-`kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick.yml`
-
+```shell
+kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset-thick.yml
 ```
+
+```shell
 cat <<EOF | kubectl create -f -
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
@@ -30,7 +32,7 @@ spec:
 EOF
 ```
 
-```
+```shell
 cat <<EOF | kubectl create -f -
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
@@ -58,7 +60,7 @@ EOF
 
 Make some pods that use those networks.
 
-```
+```shell
 cat <<EOF | kubectl create -f -
 apiVersion: v1
 kind: Pod
@@ -74,7 +76,7 @@ spec:
 EOF
 ```
 
-```
+```shell
 cat <<EOF | kubectl create -f -
 apiVersion: v1
 kind: Pod
@@ -90,7 +92,7 @@ spec:
 EOF
 ```
 
-```
+```shell
 cat <<EOF | kubectl create -f -
 apiVersion: v1
 kind: Pod
@@ -107,7 +109,7 @@ EOF
 ```
 
 Verify that the our network attachment definitions exist and that pods are running.
-```
+```shell
 $ kubectl get network-attachment-definitions
 NAME             AGE
 vlan-network-1   5d21h
@@ -120,7 +122,7 @@ samplepod3   1/1     Running      0          3m45s
 ```
 
 Check the status of a pod.  The annotations section defines the networks the pod is a member of.
-```
+```shell
 $ kubectl describe pod samplepod2
 Name:             samplepod2
 Namespace:        default
@@ -156,7 +158,8 @@ Annotations:      cni.projectcalico.org/containerID: 173a1262a4e4d56c3da4e3cd0a6
 ...
 
 Check network connectivity between pods on the same network.  In this case, the IP comes from `vlan-network-2` in the `describe samplepod2` command.
-```
+
+```shell
 $ kubectl exec -it samplepod3 -- ping -c 3 -w 10 192.168.2.203
 PING 192.168.2.203 (192.168.2.203): 56 data bytes
 64 bytes from 192.168.2.203: seq=0 ttl=64 time=0.187 ms
