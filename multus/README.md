@@ -156,6 +156,7 @@ Annotations:      cni.projectcalico.org/containerID: 173a1262a4e4d56c3da4e3cd0a6
                     }]
                   k8s.v1.cni.cncf.io/networks: vlan-network-2
 ...
+```
 
 Check network connectivity between pods on the same network.  In this case, the IP comes from `vlan-network-2` in the `describe samplepod2` command.
 
