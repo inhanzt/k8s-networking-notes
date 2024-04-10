@@ -17,14 +17,17 @@ chmod 600 "$KUBECONFIG"
 Optionally, edit ~/.bashrc to include `export KUBECONFIG=~/.kube/config` for persistance
 
 Run KubeVirt on the cluster.
+```shell
 export VERSION=$(curl -s https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
 kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/kubevirt-operator.yaml
 kubectl create -f https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/kubevirt-cr.yaml
+```
 
-
-Allow the cluster to fully start before proceeding. You want everything to be N/N (e.g. 1/1, 2/2, 3/3). 
+Allow the cluster to fully start before proceeding. You want everything to be N/N (e.g. 1/1, 2/2, 3/3).
+```shell
 kubectl get kubevirt.kubevirt.io/kubevirt -n kubevirt
 kubectl get all -n kubevirt
+```
 
 Check that your system supports hardware virtualization.
 ```shell
@@ -32,7 +35,6 @@ egrep -c '(vmx|svm)' /proc/cpuinfo
 ```
 
 If this command outputs 0, it doesn't support hardware virtualization.  Run the command below to switch to emulated virtualization.
-
 ```shell
 kubectl -n kubevirt patch kubevirt kubevirt --type=merge --patch '{"spec":{"configuration":{"developerConfiguration":{"useEmulation":true}}}}'
 ```
