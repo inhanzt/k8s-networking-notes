@@ -170,14 +170,23 @@ Annotations:      cni.projectcalico.org/containerID: 173a1262a4e4d56c3da4e3cd0a6
 Check network connectivity between pods on the same network.  In this case, the IP comes from `vlan-network-2` in the `describe samplepod2` command.
 
 ```shell
-$ kubectl exec -it samplepod3 -- ping -c 3 -w 10 192.168.2.203
+$ kubectl exec -it samplepod3 -- ping -c 3 -w 10 192.168.2.202
 PING 192.168.2.203 (192.168.2.203): 56 data bytes
 64 bytes from 192.168.2.203: seq=0 ttl=64 time=0.187 ms
 64 bytes from 192.168.2.203: seq=1 ttl=64 time=0.089 ms
 64 bytes from 192.168.2.203: seq=2 ttl=64 time=0.068 ms
 --- 192.168.2.203 ping statistics ---
 3 packets transmitted, 3 packets received, 0% packet loss
-
 round-trip min/avg/max = 0.068/0.114/0.187 ms
+```
 
+Check that connectivity does not work when connecting from a pod on a different network.  In this case, `samplepod1` is not on `vlan-network-2`.
+
+```shell
+$ kubectl exec -it samplepod1 -- ping -c 3 -w 10 192.168.2.202
+PING 192.168.2.200 (192.168.2.200): 56 data bytes
+--- 192.168.2.200 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+command terminated with exit code 1
+```
 
