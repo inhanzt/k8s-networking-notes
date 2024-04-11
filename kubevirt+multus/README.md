@@ -105,7 +105,7 @@ spec:
 EOF
 ```
 
-Create some vms to test the networks with.
+Create some vms to test the networks with. `spec.template.metadata.annotations` is deciding which network each vm runs in. A vm can be in more than one network; `k8s.v1.cni.cncf.io/networks` accepts comma separated lists.
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: kubevirt.io/v1
