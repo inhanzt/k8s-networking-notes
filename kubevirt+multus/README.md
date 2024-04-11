@@ -107,6 +107,7 @@ EOF
 
 Create some vms to test the networks with.
 ```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -146,9 +147,11 @@ spec:
         - name: cloudinitdisk
           cloudInitNoCloud:
             userDataBase64: SGkuXG4=
+EOF
 ```
 
 ```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -188,9 +191,11 @@ spec:
         - name: cloudinitdisk
           cloudInitNoCloud:
             userDataBase64: SGkuXG4=
+EOF
 ```
 
 ```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -230,6 +235,7 @@ spec:
         - name: cloudinitdisk
           cloudInitNoCloud:
             userDataBase64: SGkuXG4=
+EOF
 ```
 
 Wait for the VMs to start, checking periodically on their pods.
