@@ -40,7 +40,7 @@ kubectl -n kubevirt patch kubevirt kubevirt --type=merge --patch '{"spec":{"conf
 ```
 
 Install virtctl, a command line tool for manipulating kubevirt.
-```
+```shell
 export VERSION=$(curl -s https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
 export ARCH=$(uname -s | tr A-Z a-z)-$(uname -m | sed 's/x86_64/amd64/') || windows-amd64.exe
 echo ${ARCH}
@@ -49,3 +49,182 @@ chmod +x virtctl
 sudo install virtctl /usr/local/bin
 ```
 
+Test that virtctl works.
+```shell
+virtctl --help
+```
+
+Create some network policies that will control network traffic.  
+By default, all pods can communicate with all other pods, so the first policy is to disallow that.
+```shell
+cat <<EOF | kubectl apply -f -
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-by-default
+spec:
+  podSelector: {}
+  ingress: []
+EOF
+```
+
+Next we want to allow certain traffic, which we accomplish with another network policy.  This one allows traffic by label.
+```shell
+cat <<EOF | kubectl apply -f -
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-by-label-my-label-by-value
+spec:
+  podSelector:
+    matchLabels:
+      my-label: my-value
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            my-label: my-value 
+EOF
+```
+
+Now we create some vms, one without the label and two with it.
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: testvm1
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/size: small
+        kubevirt.io/domain: testvm
+    spec:
+      domain:
+        devices:
+          disks:
+            - name: containerdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+          interfaces:
+          - name: default
+            masquerade: {}
+        resources:
+          requests:
+            memory: 64M
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+        - name: containerdisk
+          containerDisk:
+            image: quay.io/kubevirt/cirros-container-disk-demo
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userDataBase64: SGkuXG4=
+EOF
+```
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: testvm2
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/size: small
+        kubevirt.io/domain: testvm
+        my-label: my-value
+    spec:
+      domain:
+        devices:
+          disks:
+            - name: containerdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+          interfaces:
+          - name: default
+            masquerade: {}
+        resources:
+          requests:
+            memory: 64M
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+        - name: containerdisk
+          containerDisk:
+            image: quay.io/kubevirt/cirros-container-disk-demo
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userDataBase64: SGkuXG4=
+EOF
+```
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: testvm3
+spec:
+  running: true
+  template:
+    metadata:
+      labels:
+        kubevirt.io/size: small
+        kubevirt.io/domain: testvm
+        my-label: my-value
+    spec:
+      domain:
+        devices:
+          disks:
+            - name: containerdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+          interfaces:
+          - name: default
+            masquerade: {}
+        resources:
+          requests:
+            memory: 64M
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+        - name: containerdisk
+          containerDisk:
+            image: quay.io/kubevirt/cirros-container-disk-demo
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userDataBase64: SGkuXG4=
+EOF
+```
+
+Wait for the VMs to start, checking periodically on their pods.
+```shell
+$ kubectl get pods
+NAME                          READY   STATUS    RESTARTS   AGE
+virt-launcher-testvm1-78wq9   3/3     Running   0          15m
+virt-launcher-testvm2-sq8mb   3/3     Running   0          15m
+virt-launcher-testvm3-5gmqv   3/3     Running   0          14m
+```
+
+Check the ips of our vmis so we know which ones to ping.
+```shell
+$ kubectl get vmis
