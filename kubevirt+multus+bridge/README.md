@@ -4,23 +4,17 @@ cat <<EOF | kubectl create -f -
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: vlan-network-1
+  name: bridge-test-1
   namespace: kube-system
 spec:
   config: '{
-      "cniVersion": "0.3.0",
-      "type": "macvlan",
-      "master": "eth0",
-      "mode": "bridge",
+      "cniVersion": "0.3.1",
+      "name": "bridge-test-1",
+      "type": "bridge",
+      "bridge": "br1",
       "ipam": {
         "type": "host-local",
-        "subnet": "192.168.1.0/24",
-        "rangeStart": "192.168.1.200",
-        "rangeEnd": "192.168.1.216",
-        "routes": [
-          { "dst": "0.0.0.0/0" }
-        ],
-        "gateway": "192.168.1.1"
+        "subnet": "10.250.250.0/24"
       }
     }'
 EOF
@@ -31,23 +25,37 @@ cat <<EOF | kubectl create -f -
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: vlan-network-2
+  name: bridge-test-1
+spec:
+  config: '{
+      "cniVersion": "0.3.1",
+      "name": "bridge-test-1",
+      "type": "bridge",
+      "bridge": "br1",
+      "ipam": {
+        "type": "host-local",
+        "subnet": "10.250.250.0/24"
+      }
+    }'
+EOF
+```
+
+```shell
+cat <<EOF | kubectl create -f -
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: bridge-test-2
   namespace: kube-system
 spec:
   config: '{
-      "cniVersion": "0.3.0",
-      "type": "macvlan",
-      "master": "eth0",
-      "mode": "bridge",
+      "cniVersion": "0.3.1",
+      "name": "bridge-test-2",
+      "type": "bridge",
+      "bridge": "br2",
       "ipam": {
         "type": "host-local",
-        "subnet": "192.168.2.0/24",
-        "rangeStart": "192.168.2.200",
-        "rangeEnd": "192.168.2.216",
-        "routes": [
-          { "dst": "0.0.0.0/0" }
-        ],
-        "gateway": "192.168.2.1"
+        "subnet": "10.252.252.0/24"
       }
     }'
 EOF
@@ -58,60 +66,30 @@ cat <<EOF | kubectl create -f -
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: vlan-network-1
+  name: bridge-test-2
 spec:
   config: '{
-      "cniVersion": "0.3.0",
-      "type": "macvlan",
-      "master": "eth0",
-      "mode": "bridge",
+      "cniVersion": "0.3.1",
+      "name": "bridge-test-2",
+      "type": "bridge",
+      "bridge": "br2",
       "ipam": {
         "type": "host-local",
-        "subnet": "192.168.1.0/24",
-        "rangeStart": "192.168.1.200",
-        "rangeEnd": "192.168.1.216",
-        "routes": [
-          { "dst": "0.0.0.0/0" }
-        ],
-        "gateway": "192.168.1.1"
+        "subnet": "10.252.252.0/24"
       }
     }'
 EOF
 ```
 
+Create some vms to test the networks with. 
+The `step.template.spec.networks` section is determining which network a VM runs in.
+The `spec.template.spec.preferredDuringSchedulingIgnoredDuringExecution` section is determining which node to run on.  The names of these nodes may need changed out to match your cluster. `kubectl get nodes` will provide your node names.  The goal is to get a pair of vms running on each node, one pair with matching networks and one pair without.
 ```shell
 cat <<EOF | kubectl create -f -
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  name: vlan-network-2
-spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "macvlan",
-      "master": "eth0",
-      "mode": "bridge",
-      "ipam": {
-        "type": "host-local",
-        "subnet": "192.168.2.0/24",
-        "rangeStart": "192.168.2.200",
-        "rangeEnd": "192.168.2.216",
-        "routes": [
-          { "dst": "0.0.0.0/0" }
-        ],
-        "gateway": "192.168.2.1"
-      }
-    }'
-EOF
-```
-
-Create some vms to test the networks with. `spec.template.metadata.annotations` is deciding which network each vm runs in. A vm can be in more than one network; `k8s.v1.cni.cncf.io/networks` accepts comma separated lists.
-```shell
-cat <<EOF | kubectl apply -f -
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: testvm1
+  name: testvm5
 spec:
   running: true
   template:
@@ -119,8 +97,6 @@ spec:
       labels:
         kubevirt.io/size: small
         kubevirt.io/domain: testvm
-      annotations:
-        k8s.v1.cni.cncf.io/networks: vlan-network-1
     spec:
       domain:
         devices:
@@ -132,14 +108,16 @@ spec:
               disk:
                 bus: virtio
           interfaces:
-          - name: default
-            masquerade: {}
+          - name: test1
+            bridge: {}
         resources:
           requests:
             memory: 64M
       networks:
-      - name: default
-        pod: {}
+        - name: test1
+          multus: # Multus network as default
+            default: true
+            networkName: bridge-test-1
       volumes:
         - name: containerdisk
           containerDisk:
@@ -147,94 +125,13 @@ spec:
         - name: cloudinitdisk
           cloudInitNoCloud:
             userDataBase64: SGkuXG4=
-EOF
-```
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: kubevirt.io/v1
-kind: VirtualMachine
-metadata:
-  name: testvm2
-spec:
-  running: true
-  template:
-    metadata:
-      labels:
-        kubevirt.io/size: small
-        kubevirt.io/domain: testvm
-      annotations:
-        k8s.v1.cni.cncf.io/networks: vlan-network-2
-    spec:
-      domain:
-        devices:
-          disks:
-            - name: containerdisk
-              disk:
-                bus: virtio
-            - name: cloudinitdisk
-              disk:
-                bus: virtio
-          interfaces:
-          - name: default
-            masquerade: {}
-        resources:
-          requests:
-            memory: 64M
-      networks:
-      - name: default
-        pod: {}
-      volumes:
-        - name: containerdisk
-          containerDisk:
-            image: quay.io/kubevirt/cirros-container-disk-demo
-        - name: cloudinitdisk
-          cloudInitNoCloud:
-            userDataBase64: SGkuXG4=
-EOF
-```
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: kubevirt.io/v1
-kind: VirtualMachine
-metadata:
-  name: testvm3
-spec:
-  running: true
-  template:
-    metadata:
-      labels:
-        kubevirt.io/size: small
-        kubevirt.io/domain: testvm
-      annotations:
-        k8s.v1.cni.cncf.io/networks: vlan-network-2
-    spec:
-      domain:
-        devices:
-          disks:
-            - name: containerdisk
-              disk:
-                bus: virtio
-            - name: cloudinitdisk
-              disk:
-                bus: virtio
-          interfaces:
-          - name: default
-            masquerade: {}
-        resources:
-          requests:
-            memory: 64M
-      networks:
-      - name: default
-        pod: {}
-      volumes:
-        - name: containerdisk
-          containerDisk:
-            image: quay.io/kubevirt/cirros-container-disk-demo
-        - name: cloudinitdisk
-          cloudInitNoCloud:
-            userDataBase64: SGkuXG4=
+      preferredDuringSchedulingIgnoredDuringExecution:
+        preference:
+          matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: In
+            values:
+            - minikube-m02
 EOF
 ```
 
