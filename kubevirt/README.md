@@ -228,3 +228,52 @@ virt-launcher-testvm3-5gmqv   3/3     Running   0          14m
 Check the ips of our vmis so we know which ones to ping.
 ```shell
 $ kubectl get vmis
+NAME      AGE    PHASE     IP               NODENAME       READY
+testvm1   101s   Running   10.244.205.204   minikube-m02   True
+testvm2   90s    Running   10.244.151.12    minikube-m03   True
+testvm3   81s    Running   10.244.205.205   minikube-m02   True
+```
+
+Verify that `testvm1` can't access the others.
+```shell
+$ virtctl console testvm1
+Successfully connected to testvm1 console. The escape sequence is ^]
+login as 'cirros' user. default password: 'gocubsgo'. use 'sudo' for root.
+testvm1 login: cirros
+Password:
+$ ping -c 3 -w 10 10.244.151.12
+PING 10.244.151.12 (10.244.151.12): 56 data bytes
+--- 10.244.151.12 ping statistics ---
+10 packets transmitted, 0 packets received, 100% packet loss
+$ ping -c 3 -w 10 10.244.205.205
+PING 10.244.205.205 (10.244.205.205): 56 data bytes
+--- 10.244.205.205 ping statistics ---
+10 packets transmitted, 0 packets received, 100% packet loss
+```
+
+Verify that `testvm2` can access `testvm3`, but not `testvm1`.
+```shell
+$ virtctl console testvm2
+Successfully connected to testvm2 console. The escape sequence is ^]
+login as 'cirros' user. default password: 'gocubsgo'. use 'sudo' for root.
+testvm2 login: cirros
+Password: 
+$ ping -c 3 -w 10 10.244.205.205
+PING 10.244.205.205 (10.244.205.205): 56 data bytes
+64 bytes from 10.244.205.205: seq=0 ttl=60 time=7.196 ms
+64 bytes from 10.244.205.205: seq=1 ttl=60 time=4.213 ms
+64 bytes from 10.244.205.205: seq=2 ttl=60 time=26.977 ms
+--- 10.244.205.205 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 4.213/12.795/26.977 ms
+$ ping -c 3 -w 10 10.244.205.204
+PING 10.244.205.204 (10.244.205.204): 56 data bytes
+--- 10.244.205.204 ping statistics ---
+10 packets transmitted, 0 packets received, 100% packet loss
+```
+
+Cleanup if desired.
+```shell
+kubectl delete vm testvm1 testvm2 testvm3
+kubectl delete networkpolicies deny-by-default allow-by-label-my-label-by-value
+```
